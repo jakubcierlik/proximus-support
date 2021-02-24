@@ -1,0 +1,347 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  # - /opt/cfy/types/types.yaml
+  - /opt/manager/resources/cloudify/types/types.yaml 
+  - plugin:cloudify-openstack-plugin # ?version=3.2.6
+  - plugin:cloudify-utilities-plugin # ?version=1.15.1
+  - /cloudify/git_dca/CTCO_common_imports/imports_all.yaml
+
+description: 'Server Deployment 2 NIC'
+
+inputs:
+
+  environment:
+    default: 'oscar23'
+
+  git_commit_id:
+    default: 'scale1'
+
+  os_project_name:
+    default: 'acicert_testproject'
+
+  host_name:
+    description: 'hostname'
+    default: 'dummy'
+
+  domain_name:
+    default: 'tc.lab.corp'
+
+  image_name:
+    description: 'Image name for the VM deployment'
+    default: '0da0c795-5b14-4021-8f38-4c70c1758c85'
+  
+  flavor_name:
+    description: 'Openstack flavor name'
+    default: 'jelle2' # m1.medium
+
+  keypair_name:
+    description: 'Keypair name'
+    default: 'itf_keypair'
+
+  network_name_1:
+    description: 'Network Name 1'
+    default: 'test_tvtools_vm'
+
+  subnet_name_1:
+    description: 'Subnet name 1'
+    default: 'coa_s_test'
+
+  # network_name_2:
+  #   description: 'Network Name 2'
+
+  # subnet_name_2:
+  #   description: 'Subnet name 2'
+
+  security_group_name_1:
+    description: 'Security Group name 1'
+    default: 'a8040a5c-ede8-402c-976e-62021b0b3970'
+
+  # security_group_name_2:
+  #   description: 'Security Group name 2'
+
+  availability_zone:
+    description: 'Availability Zone'
+    default: 'AZ1'
+
+  # Cloud Init
+  resource_config:
+    description: Config for cloud init modules
+    default:
+      #cloud-config
+      users:
+        - default
+        - name: root
+          ssh_authorized_keys:
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEArgJvFtNDrULuaCgKYUMoaxJHfJ1lhx5cVQVbIV7lTYvaHAuVIEEynuaNwMW/c1rMZXK1Np9Ic6XYvPMJDphQkQ691dvf/ag2CXTHo3ANan/2RTk0wrrCUddQfiQ9p7W8LhT2ctvRQK2wRqynWpoH84aKm+zjJRSOh5lA8YgRXV9T+ESsfC9wn3TPiuVijUZkge16fJgOpgCKdEEtHrHjOh4Nr4o6muMbJN0w6TYqRLVeTWCgrppZt+W+2hbZutf6MiP/2f8bxr0x6V1R2JHrNcWIIx5cL0F8VWx2XEct4R6pVczj3135E7TYT3JqCBcqj5Lwq8yQCADcmvUxS/v0ALCG4nIoNYgLGcNaYFGVX5bOuDgNExzcJMxA7+IU39o3aVjnj2StMaAzMtEuh+gA+tb74cpiwc3NqojEoJWc1bRH4PMo7UrjuovWRHtwtGUqkU+A8PW1x3uBnHBFSH0CFY9xSN4R5/ouo71imnceCKm2lQfhD4nf8/nWAjpmtKJhUhscsWsTT4qIsBSbDrUxudKZIGZq8lBtao3GXiKkcnBpw8ZqcmaJcYPnnq9RRoH++lcYwGiOZtL1N9rJAdelXpeR1n+JOD76fs31MY+JXIZ+I2K0WRA+EJ3aIr+RndmUcaGsS+6iSOi0GIopu6wiPg3Gs2Jg17D2UAhQ87R9MBM=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAqUbFS7n2MwrPpg5ho0HLsG6sls46ZwaUqGtX/wouuTi3ZlLj1dDxc09sMiC4paBnyDFbi0XuFwyU7do7jbeXCG4y68iY088uZyjUTLwiwrgldrQwe1PE3/jjM52WQ3gGQYVgxbwJ22Gy+tDUeb8bNFHFReRj6T8cVAbpeQjmIpsrc5+Yr6FQqIkx87ud1im8XD6WTGkdb/Gb8rSlrXZ/DFaTt5daubuA4T9LUr+GDOkiad+3hf1VjlMGsqdpFDCWQEq/6Bc2Hw3TejpqWxVpXGS9xeuMj2vX2DHv1ZoQq++9afV5GJXcUOuqYsi/0Ufvk3BA332Pc2jFawor8/HaRetwGkqOtIZyrkj3qJrJWq4icbVNxPEBqHyzzYK5t6p73AAxKVuRfJfYPZq9QHJ59lLyGVAvXbb06braVr8RTqLAPR7ts21ZjEcNGAygJQGBR4ynXey75UtC/0LGuo5K3RVn5jfVT+KKWWmHhTD2UJpi5MQ0YUgr30sgr8JIZ+SHOZCnuLQ1YfKRHQOrV1OEmY+z/d+Qp8CR4W2kuhefYovA67YegqGfVbr9+d6QRgGYwAFQeIdRdz3zICyMZ9ZYFlEIrDXJRErkkqL7s19/fX1eF3+zdo98gGHYIw70tsYHVmRGgvbqyNXDzGDJlu27mgXrSL30kuY3fhqJ61JedB8=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEA0uWv/Rwtuwns29Db/MaUK4VnHQcWs9eTQleazeWsC5ko/4AimZrH4ZIXwp3I0wJ5vFtMZrvAgWoK3uAJUUTARiLMXtJG6E8D6qh51Z8JL+TzyGEWgQcjiIyid9HpS27i+HFcjPdSlFJNd5CrSQthqmv+cyytss8E+Y7LnKHuIxffKtGZJrcma7joDXjFEroJZlcS+V+/npdbwl8PvElkTqWYe9PqyfJId6nEhESyts55WIaP82SSUN8FKscC3U2qejoUJ9z+5z/pmFCx9WIf4psY642Cm/sPi2fV08FCMF3J8ec8npnd/MLZWC+EYbDsFYfJlL+5TU0vTUHaf4KnHpidSQB32cif850xb/ORaXS4V0Yk8kHMVwh7hHhVtpVA24q/mngbJ7hYcDnmia5S86LoNe6aqVpVEQHSm7m+W63CERyzT4YiZzjq5PB1bGy0EzMy/YPfdudkNHTDhIXdguBM1yo8sDE0rZ2rSfx73WqrvTQqTyfJs0ZiU1pd5A7no2XQVpeGrOQ/jzq7Lpyp2OgVHVxgLEK1wZ7MYgpK4EhY/yzjivR1GXGntCl3kgwK8qpyYfbdZ00HVyJXy1mgJKaFqOQaP2f+LV52E06E5XI1Xfch9Mba3Okwiwo5vUyZVEobVrVXC/78Lsce6jjeeAiiTj7AYTgDX0Dy4hAUJPs=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEA0s3f3VtjzW5Q6HT/If0HX/LE7UrCCEJwHQrSBCuizhdvN9vmYEck9il2YSKxij0DiUOvascBfYKs0yPzCkLbffBzJE47QbooQBvNA4i4cqOnJY8g4Rx8R2YfeZap4jcpCUVI4x+KiTjnAi9jCNYia6L5iCIO+2zCwrDPY485Lod7F9ur1K+mo4TilcQlEEpydUTdhdIWsjqSHFvMrlIqUJ+ixWvPC+d73SVl5VC9a1ZPq0BW1CmjaEHpx2dTLg/+UPP0NLnJbOoNVxdLCmw6HtS5IV2Ppj/+88jJHPUfiWpzvpfp13Xw9ogz9qlwS3M6OeDH5AeDrTEjLSkI7LzBr29XRV4m2CkmL+TTiLPq1Sz3DW4QBpsGhPwSKf54Opnh0lS42mLxHbFeIeNqGNCyevU6xsUfFH5dgHdCpUR3zGcT/HwGjjpTPjz5ZWhec225buoY3uysX+GsXBlGucGX8ftsQqArZ5jza1xTrBxNWYrcw0hSUKJL/lfN7V41oPAA2ZcofnJa8XkHRAl7R5SrLLk7l2NYyl4pJLBPBn7TnIJ00ncg6hZNr/LePHPHU0VSdjy+wHJY6OCPYuHBdC35o+Wp2GLPyuQnZCZLPxdxSPneqkIjuHzg4oUvdeUqoARbEqToHLvGxpKUXGG9rMRrgL1CW9/UaE9FUicVbmT/doM=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEA7+ltRqZRryEaaKxFofHVaa5qj0BpehIEeYesOKGmLZToPcV2Rk0+WdUR16V09MCLHqS45+o6KTW7VjF47jRROyCBqGER/6ACdQHE9CPPPKac3lVMInD65wu+eVPE1JmvEfs+sJ/xPWfieNXo/7A1etBXGK33lVM0Hezlu0o2Ly4G0mf1Oi0HQoHCq9x5rE9dOU0DQz/g1t13K8zzyDis79pbKvHuGAUZp3gri7wGERWJECIQHo3DUFbVXO6LAYKVG0SVEX6kRAt3w2XeYIoNzl1XyzEwK1VTAnn1JWk5LimBIa++bM2o6AavbTu0x64mfTCZYcHwHs5RYFIkpkJsdYQmoKGy4GZgghuFRhanZNJWJZ1a+U84pshqSsbN9anrTGfEMeACtZkS9HmT1aorYXEKXxPH7ilC5ewp1zf8U8PdBxRDARku1RnOTJb/EijoHwxwyQq8ib54hk3G+2zuj7B2JWfthZRGpq5pXG7Nbhdm3/WbBXi8zt5/z9EB5xiO4bbp8SLgv3cvIUTRETNY7PK6yvyyRjvk3jDYsTStFLkH7Y/t8STCgA7bv3x3QMMn4xlC/TJqN2yej7SmYXLTnWYXcFHCEGqvMakyS/WeXpXgiYYuYbBPM4BI/txsT3T7C/aFcwpK5w7O7cgFA9n+UPaxALqE/i4X5e6HZaGCISc=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAx/5QavvMHAsORjugXc8Iqed4qhlN7CBMuDYpn3Nyv1yowp2cgw/87yC/tYBdNh+lpZ8sz3zqYxPWqJMUMh3BMirGrsBFCK0mqUqeHzleYoJV0VEX2Nt8QBtCJEpxzd8Ofz+zc3JRyTPGnLcT8wUODX49nIOfuDiQFSbqjq7NZZ4QK/y0pLUDu0BmYB/Mio04Ir4nxADHPY7lvhu/yU83CvB15W03M/4aGxEIPkzw2fdEngMz5jRFOBM9cBBCaEH9tXRMxiao+YwTqCxammlDmWfD6GnqohTQ/4hUUkMxi8oKgoA6VoFDF2jd47nvL/FgWHb/EtG9+KBcTXS11vVX0ooUMpgMzIDnIRkj/QC7Ivgo0xjN53JeFVJtWbfl7+y1NhXwyHkhJz6rkRhQfos9sRjPNI9aargd7X5xspfa6dyNDSaPNZU4M99c9/Y30t8Y/QuOsrd6X/fjH/lE0k5yyNRet05rOTTW2Jefo+6XHOTm9gDl3w+o/AOTiYRT6up34HxJGtoHtXnQy8S1EwFL50Ks/mWd9/6BYx96jY/VftBlWBPSR1oNyDfpWcCq0sAWVSzf6UAPtnwFyjHqtfToujK1bKsLrdokKtxsz68ldufV9ojZFsrVbutvi7BonrmnwUhdfCzxVHF5xcjaRG0nJlR7OI3hi3mADoqr2VVQdEk=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAwP/NgWLIoglnJyDLBAwNO+U1DYMJQA9zdTHvLuwf/5D990pHteNLb6RQxRRh3eMcJPHcwik1qpN7KG5pUV737wMZe7xpQKR4lmglxzX3BEYVsG3xYvex7Z9e5NKF0OkaVnzkcP3WFLW8vbkUK1c8UAxZ+/kwcUmiv6tn9iu/nKnvk9BFa+MWDZBk0RP5VjIaaYWwjU3MLKNykwKVjOBY8yAuw+woYWWYlrupvG8b4wM05o4WLn54g53ZKXExVPsz7H3Vx3z+MOidOSKgy+CDFvDLbjMC6LJWR4Ta+kPsglrTAnb3S+WYozEeeyB93jwFeWPj+emgTVYCDB1WPzIx6zY2XoetOpeyj4vvhGFZcA0m3IYmpQWZ3zhIePOAQA0OhGVkh0DvoKMvXe1wSoLAG32zf/M2/RIyWrzxtjkfdV8K8vnTLunMzIHR+kNYHwo44evnPh32M129Wy6sVUbtPq7dUQll0D6zMzx+lJbqbXm4ReHwMDjc/kbkuD8L+AVvxnLL6ZP/vOe8bWU6CqYQEsrWkO0BI2D9OzsO+k2UWXK9MYHMXfp3LiEqazYPP1cNuGosnagxcKXP4ie9+5DCKR31VffI+XfG4dsw/QgLy9DrXxZGwpdoXU5mPQLfHY0iTRdVHLh11vhk/DjaPpZ21XBR5gh4kP6DTF+K9Ca4IJU=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAn9YIN8T0QpV1qESFgAC3JTI4hc/33rH7SfeE3F6F6UCnDKQZ8p/xDlD0JHJvW/kuMK/aPbGH+grXvYyoofbaNGb75iNVBTU551gAs1Imd7UXYt/9YKVNQtjpb1TiVhiyqdQgGuy9cZa1s9BAp0sdW3uJhWgn0/BGM/M5ReBMIDUpkaoj/PyQ6NxKRhv74Or6tu+C295tm69pMqjy4W0UoAWsfiZTzzDC/P+gNfuPUbFJ7j0KtDkuPQQhm0vsaOs/2x1ppn+Oqhvkt10KoiahmoseM6jIAO2Ruv6cvrAL+xo6Si80Bk9k63rTFJTAPONgMFKxXCN9SuMTmZIeXdEQZvJ0h12rtAW4NbV308K0Y5+7KxHK68n5A9JEn8EvT6vrG3n/tzhd+umaIadVYpxXL8HE9j8OnkGbMEIiswt6z8UkY/XtPl7coVbdpwILVhMAPuWqPMHZDyAwa4OXdP29PUTyAzvg2hcXxgVlzgtULhkisF9vOOFxFMW7BAtdDyAlts/MeZ85JGUlP9dB42k8jSeTNnqzz2hrKfBf4HHRv+u+KVkdeXoAv5sBuyZxzhhLZI63y1eiCNGEqd9sjLQqkH+Eu3vOMu6TYb0YV/SlYiUAYEH3CJKKTrrRgvhJeSNvk65UIjxw/WSYIAILJjMeCBCj6Ps8aQ8K6m5fqPoPqH0=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAtXJU7VGHJIiUOwjBcSAuGW8uWJ/NbUQsavBkila+aTmghddW9LumtpgD3lGY/PAxXvWQkrK7y0dVHwcaQOr2CMrKiQO5vro8NGN8rO87oTc4nq/j+b7rqk4JPzcVwq2RtdnA3wsOv5ncfo55DWH0GUlYRY/VfHsuuoQD8poI6t0YB4jq0yzqtuHASiqbalwN8v2ycNoYSepjLPTTJ8k9dUUi+KkdUrEg+950FOCpdNI8Wf90ODf1ANYWUCnpC8R4ZNinjQ3/VbDTnozHEesNGt1rx2d0c65w3+UVOGTUgAAngV6tH1JsGUDCmvkrRw16AAZ3Wq4+uf9HrvaQ6Q4vl2J9vlRNSTB5dzEvUHaLkztPOb6kW9xF2kMgUD10WGkVbiLsBK8vKI7unaKEwQrXNffcGzo7O7vBpUsO8xDFBJrEvwJDWLPAIRS/tXXwBbW0BMEc+yE4yRBIduHVsP+BhNHta/mYIRe+AXciHxFfBZa0I7nWCJ3DkrLluGkQE4hlNH9kmHcxmCeDhi+GdZgdr6herMzqGH4T8U0bEuF7MXZ0tWeVFa2r8il8P/bSLc8KtTia9Rut1NDD/Q4/9cLVST1T6Pj/0qmtUSUVtpyIQ2kcvbjkmCXSisMpH0hxzLBstplSFaqpL83idG9FfNpBD/GiBuRKQuRc4ajV9YrDQ78=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEA2JnLTUcMWqos8U07jnI35JxXIAyWVB1DfKvV2TA7ZBfLcdib/SKbt8IPUKcj56ZcfPKF0v8utQK8ZN7Ty4dtNOw8FfLoyqypTPmAqtW0zd/sSEfwx14dNjUrGv2EiiCq3mEuPyAlZfwDEQWNADLotnAzDFI8z3wc+ygdHAFLPIokfD9acGfhOR6A8r4hktvp4ziPjiUv1iJft5CyK5B64F5LwT+mO09tcVfRJ2Ep4N5Prek5ZKU/UYPRtB44SgBhL/qi7eW6OLismDgFEwM4k5Sg7JckruzvEi7SHV6PTa0EcTtT1sVmdgLjERROvW8sX6wwx6+S34E22KP+EHazHjcPnptt7qO/aHLpRd12/v1A/bWxo4P1CY5NfYHOKnbDOpd7L7GlRg0V8M2ykM1zgHjnNIqc8K8Rly0aSgKQMZOFKKAwgpvFhiKBtvXg8gpKFLXITUVTomgWonkG+4/6Orcnq3meyGJu7Et9ksN32/hIAOjHrupoJgTZmame97llJxkBEfNCo/tM++48RTd37/njeftN8j3LBO1jM1rnsm7Mu428sCHxPuYT+UgUVNJ2IaOR8L8vxRrOXbqpaqui/gK+P934We6BYYhls9ENJfxBMOE7WHilCK7jjIATa9AeU1WbguOh8kPqQgE+nWeyOhx3dRoifc0xbxj9WU7MvN8=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAyJzXTriYI0tErFrgXExF3LJazE8chdoIwU1g68XrPIuGQmKUkojYi33NSJOAZyj74yxLAe/qHKWgJIfodDnXm/qg4yMslt/d1Dn870GrzlKjEqXeb0v+Xwo0vL+ZjOYhG002dzlIaYh4efuldmtky9w2COYXszEeswpLiuptq0rhI9CfrRydez1qI1JZPWC54f3oPrV8RJ57eKCAf38qgDZt8YsayJAGoFsCBYfz3/3RoATytb0cQrlN6r2FkesWLt+OWh9YoA8aGPwC2zRq77sziG5tsWCmfPs2kfhiOgIKSmuVVRd+Y4oleTdrBMgk3HYcf7KKz4SYnsQKA53NMHTVxXAW+oIXV66GT5WpjxajaSdKgh3gH03jMEx+gvKkto+dNpYnlGEeWE4yfdXyg9fVgPwKZphBErTyo8GLdqXh5aYpNUc38QRXuR3mqfT1evaSz6/z/iw81gwO97iz0djrQNsPmJ3a7mWdi7hDIoPzZHU1kKFcoAdSKWfn7Adorwuybb/fWvipMvFGYJxEO6CIqIilckCyJ7pkHGPX3a5g6gPyHzK/6sUZa1D/mvM5R6rRtyxstgPQTLv/p4Bw49GfJCB3NknbuqoLJHfV3cLUgc0vM7Xls/+3ovx+LBNM4QlE/HBi30so+2IZpgbD+D/GO51zJ+0V6On05pqhWZ0=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEArDxEzGM9aPh2vceMMeM1jzM6DB0HZNiOSorOEj3vW1++gNFEHI++evGTBvm5ACQIndOJZdzv7MVMYMxGIyGQEaFINdM3fPffQY8/PJ7flW7ZUI7k/ZdPAAB3rHr+wJPw7afYXqzT5TKvNrIYdg+hUwZY6VQsY9BkaVaZV5J0WmW/8GQpMmVPkZfmilENc69mbcGhHD4cxJaroDEKjysllXk83+M/0mLlVvslRdWQDv3uwEN1cY71Xfnma44gK4rxM7S6aaJfHbE05o6QYD6FmAmUvEwauBg8NK7C7gvTOmQff+34OrkwQOBkHnuFasRdVwFGdecAtuS1kE1ZycUL6je3Qrii0N8AqqYgl0lry8Lm2FMAHzZGCUotCBoxg2zAMLpTUSyVOytHOJzmR5bYo2IK1Bw6vHSRcv3IHdJpFABdkoMbUvg4COAfXY+8iknH7nd42H/Jvr+tpRW5NslpduNvQix2fFLvnBRH82DwwF98AkCphUwARyOV6Bw3O/Q8zYQsdAREKkMjP84LQ/5ujsAn+azllzgsDg+4Sq8800Mawv8s3SuAMU2oWFgoPQTTxOP8xpylnl6B0A6rX9qqEsbqdlAAWUKKAjG0BawGnmbBDZ0VGtAxDMS5LQVcvUksjDC3ewJ07rcLokLrF6uoS3sF1U8kpKe7PK0gWnCFR0k=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAgEA2v2r6mSDQp5dWqrcDPwN0PN/k0C0PM/mXTRvmquXTPa878XQ8yZ9bZ3iC21mxKxLAeUSsFZ9uCul8Se/3pqX8I216fec2VWvJw+JQH7jIKlTrTtnUlUglf7TXcrALvVFwQYPg80o7Dq/8OI5lLyjQL7lxGr3BwSMCsWI4z2mSZfh8FwHGcIt4IrMNZImerlVXYqKq54l2iQlDnmbWb/Tf7t9NgwL+CM54PRfBaGKVEwoRM/m4NAN9Ib/Wa9ZWpcSWAtTafCUVnEhfP2ATR2lQw7qtAeR7Co2R8q8N3txxSCTcx4SlKqewTwtMl+cmya9zexSYkAIUMUVICcAhHqfk4QMKOQz5sez7t3AEiljKQOhHe9MsDYcaK4fcp9DNvXgLru3gsx44VmZbGNgQozWHGMDmPhtgA8mfMIUMqpCLJHzPx3zwWjMDh/t5HS0oNg1gpnW2lrK6nCAFyyIU31azqWqtkfQnLsuBGr74+HxGW0BA5SnH2zZPPBIrNIu9Klr0hkX+U90ozARzO/Sr/42PBMZITOGzitPdraPPtACwKsr1ai6OWy1mdLiP3pN8sVEcOVsiGXFNZKlDFdD3YXkkCKOWuuMHtuadXESVY/oyt+D19gngzg1BN8/9ZTiTmmaWZYjwHLFqBHMJsvgJk59+gthRmZRsOcoTgrkjcq66rk=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAsB1OwDefU4PNxuAl+BUqA2icqJ81/Xmbbx+pqRGsCKaCmNQ0mJKviE7kMh913GnU6ITozhV2kJU44u3BSLjkSxuzYApFbPkhzpPrzKA4zPTUJ9GqNgdtTF6hnTEbtSeMmw/bADHKl27Pq2VUP7LlwtdkPTNg4cuHsn49eOfShhzS4SosWepdSsIdaVFlk1R1nuO6JsIOYTDK2/SU8MTkwcVQCK1IYRlbtyQiHheMtKM6SZU/mlOb2v39LjoX2VhplQzrQtqcpbs9LKEgwL4AVP9hwhJZOlsR5InUcN9vL1a7gPfPWCkrPeOt0yWQku6nYaff/51n2v46Mhn9iQLCKVLNT8+eVR5S81wixAqLViHRrSJM7iy0s8n3+SscuEEW31fiitqFf0uJAtnCOlR351y6vhfYtOQyCwvs/6GBaDH7DNJt3f3hkWLS2kwk5fGpQB6OEOnFcS3rxTLH3aMyP9O8S5mISF+nC2mgErc/98liTdqPjCwYyNsxptsh3MKL5+ROa8cbpyN6K3RQhoSdskYCvadW9Wd/GkCtlCn9bVJvK2bRVoSSDdYf/g6EXPTc58VoVQCOMBOsdYwjxyZCdksR13x9XvZqoEe0Z24W/kPCPUe3RzjSezsRDDDc17n2kdIPk3TtGy9XKgJvDvUwecqv5zUgcrVQneAGRXA8+G0=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAgEAqDK5aFPap/FYe4DVx7gbIn3sOm+w/MP0JifQbrq6aWNRNc4WMXePOBiIke6TEIcnwdwdZEijid4I9y5nMN/12tcUPyxPgZvbtcwxetodmQpz3Ux3Eeo/ngSGz6fct3HYD71LfS+fx9Zih1gUkMEQIkwPo1NOaIoRn2IL4D3pgJm6wn82PxSRPmEHqH4a6aN/RC56yD0toCOZupgcn4kRcnl1wlzIKlD1TIsNBNROcxoM93vnzFFCBb2mKLoZQvbMiDDNI/yaMPzWXF13K6b6C6lREdYQzmcjBK2rkka6yBYWrSVTEvw40N4Xn/mLZ5+J91PaW47GukMimtHgBCM8OzQK6KEfDdtjYBlil7QmsRviIKG6VfFRtcxgCk+eYYsVahR3Tl2aCK5kAKCx+pSPgsT98MFM9bZ+iCtfVp2zoDjTSpMElTL2IzwlQPtx1rH6I5L5R1GOinL1bXyPIGTuUcwcwXlUG/dfRmuZUtJk9voEGePVqFt7EpkC6giFtsb0sw0ydeStbZMyKHI4vRvEmFlYu03lfgzSaALU7W7vHNVx1IjOXtiKt5LR6bturcwbosAa7YZbRcub6Gs7aEAV8FwxkHhXgDLFkO6AxL/95prbS7y1kCl32RllgDKS98esoJ+7RyG9xE+co7sxdzdiUWEZmOZA+VJWmfO8vTUrj50=
+            - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC2rqQZwvSnulp4hZwajcSMODLHtSe4N4I268jpqA0XN+yomYsMhfktQrLW9ibf0mqndQpu2lt9yaqG+VbFTIuWJJs1suutBD7eNeFPqou/5BdHcD6/9oeCd/QF7gQMJEAM80Wy9XDt36Kq7GECeQvO/H0LQSzJJF3tVy0SNBPAth6EAOKu6lYaQJQXYNJWNdr9UE0HhgK8F4OPhloJmouhDN2n1BnoTgK5urAoVuizL/GZjTXkuUErXT5K3qia/eKja2OukQGTsQvWu6U+U5AJL6bCCNvNjT3V+kQ/RdyUphnVxNS18FxY3FcrJe/hFZBn9HbVlIFTJzV/uGMyYQjYgPrbupB4brT5EuxfiWJXgRoePxBqXeWXvbnrUWmUh5ZPPIBsFC/LznnqYfAS8hOrSQg00LVlcNc+q2SUa8Vtcq87VCFekrzDavBeB5qIO+b8fma2kM4LUyHuHoPLZtMjumMVuqEQJMQg1v4BjbiFWISpNc2ZL/VHZUvpbX9k3B/VgcM4f2GZA5FFDvo6LP9gMNsm8qyTG7R57QRra7jIN6bBDUQa1PXTjWD6PMQMosb3v8IqnVSz95Ju/xKY1N1r6axoZ9ZlrMS1CRblvODf6p42ioTOSW4LS9evkc9zScrWXa0IegQkQrDnNQ7i4g3I3J/P+AST3lvqerrFKqhRzQ==
+            - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDWHKl5nlb10HWgALdX2z11P3sEgFUleiihg8wK7CtWCwXn+VvLMv4SHcQXjpgqArsXnqJ+wFd3v3eZJqK0i5MPc955SArVCYRSI5slA2kgQCveQXUzjI05N5xdUs2lNzYQTo1zOUnBtPMMNn1dsUU+d7QWr8MWTxLJ/9cdUl0CEKGGux6Ra5mjRpvSth7XYCpUlE11Fs9NH3HWb1P5iTbrLHU/LCgeHszsdyG4+Alzduv+sBb8vXI0t1o4XLyidSYfTU5OKDVK4ZI8dW+GbXllzi9p/4ZLJCRa/Bz0iPwc7TZHIJe617TUF1P1LC3uhi84Nd6Ubp6+zN3x9QmiUPmPP0xxrfRXSK1TSxUMrv1VxAETqZ+Xx9Fl8XVpnfeOeyoQilyvm2MKTDfWq8+sLIL1Y9OzKxioIGWvpLcuAO2mwAxSSFs1jwFJNuzMs2tY7BDmiG87uy34FFsq695TSG+q4jThwnrZBxxiqqu9ziTL1jFqS5af1h+04+fLgxfoCR6E6552eNfMHcydgirt5G7HfNAtLuXBBcQH64ie3DpMxmVHLlInH+qrCkRUB7CghPjxN6Psh+hASOjFgmHZ3HVOY5baJSlh6v1PTlbnLAtr+fQYotOPczJi5tbjtXczJ7AdWCr9nkejI2/mA4OCGaHb4YiRzjurKGdvUT4GWQRyIw==
+          lock_passwd: false
+      timezone: Europe/Brussels
+      # bootcmd:
+      #   - "set -x; echo '10.35.19.161' > /etc/default_gateway"
+      # manage_resolv_conf: true
+      # resolv_conf:
+      #   nameservers:
+      #     - '10.35.18.50'
+      #     - '10.35.18.51'
+      #   searchdomains:
+      #     - idtv.tc.corp
+      #     - tc.corp
+      #     - bc
+        # options:
+        #   rotate: true
+        #   timeout: 1
+
+  ttl:
+    description: 'Time to live - default value 86400'
+    default: 86400
+
+  use_ttl:
+    description: 'true: value specified in ttl input will be use for ttl configuration.  false: value will be inherited from a higher-level setting'
+    default: false
+
+  regex_escape_character:
+    description: 'Escape character used for searching host entries containing a wildcard i.e. *.cfy.lab.int.corp   Default value: \'
+    default: ''
+
+  os_cfg:
+    default:
+      auth_url: { concat: ['https://', { get_input: [ os_config, { get_input: environment }, os_endpoint_services_hostname ] }, ':', { get_input: [ os_config, { get_input: environment }, os_endpoint_services_constants, os_keystone_port ] }, '/', { get_input: [ os_config, { get_input: environment }, os_endpoint_services_constants, os_keystone_api_version ] }, '/' ] }
+      username: { get_input: [ os_config, { get_input: environment }, credentials, username ] }
+      password: { get_input: [ os_config, { get_input: environment }, credentials, password ] }
+      region_name: { get_input: [ os_config, { get_input: environment }, credentials, region_name ] }
+      project_name: { get_input: os_project_name }
+      user_domain_name: { get_input: [ os_config, { get_input: environment }, credentials, user_domain_name ] }
+      project_domain_name: { get_input: [ os_config, { get_input: environment }, credentials, project_domain_name ] }
+      cacert: { get_input: [ os_config, { get_input: environment }, credentials, cacert ] }
+      kwargs: { get_input: [ os_config, { get_input: environment }, credentials, kwargs ] }
+
+  rest_endpoint:
+    type: string
+    default: { get_input: [ipam_config, { get_input: environment }, ipam_ip] }
+
+node_templates:
+#Cloud Init Configuration
+  cloud_init_config:
+    type: cloudify.nodes.CloudInit.CloudConfig
+    properties:
+      resource_config: { get_input: resource_config }
+
+  keypair:
+    type: cloudify.nodes.openstack.KeyPair
+    properties:
+      use_external_resource: true
+      client_config: { get_input: os_cfg }
+      resource_config:
+        name: { get_input: keypair_name }
+
+# Flavor
+  flavor:
+    type: cloudify.nodes.openstack.Flavor
+    properties:
+      use_external_resource: true
+      client_config: { get_input: os_cfg }
+      resource_config:
+        name: { get_input: flavor_name }
+
+# image
+  image:
+    type: cloudify.nodes.openstack.Image
+    properties:
+      use_external_resource: true
+      client_config: { get_input: os_cfg }
+      resource_config:
+        name: { get_input: image_name }
+
+# Network 1
+  network_1:
+    type: cloudify.nodes.openstack.Network
+    properties:
+      use_external_resource: true
+      client_config: { get_input: os_cfg }
+      resource_config:
+        id: { get_input: network_name_1 }
+
+# Subnet 1
+  subnet_1:
+    type: cloudify.nodes.openstack.Subnet
+    properties:
+      use_external_resource: true
+      client_config: { get_input: os_cfg }
+      resource_config:
+        id: { get_input: subnet_name_1 }
+
+# # Network 2
+#   network_2:
+#     type: cloudify.nodes.openstack.Network
+#     properties:
+#       use_external_resource: true
+#       client_config: { get_input: os_cfg }
+#       resource_config:
+#         id: { get_input: network_name_2 }
+
+# # Subnet 2
+#   subnet_2:
+#     type: cloudify.nodes.openstack.Subnet
+#     properties:
+#       use_external_resource: true
+#       client_config: { get_input: os_cfg }
+#       resource_config:
+#         id: { get_input: subnet_name_2 }
+
+# Security group 1
+  security_group_1:
+    type: cloudify.nodes.openstack.SecurityGroup
+    properties:
+      use_external_resource: true
+      client_config: { get_input: os_cfg }
+      resource_config:
+        id: { get_input: security_group_name_1 }
+
+# # Security group 2
+#   security_group_2:
+#     type: cloudify.nodes.openstack.SecurityGroup
+#     properties:
+#       use_external_resource: true
+#       client_config: { get_input: os_cfg }
+#       resource_config:
+#         id: { get_input: security_group_name_2 }
+
+# Port 1
+  port_subnet_1:
+    type: cloudify.nodes.openstack.Port
+    properties:
+      client_config: { get_input: os_cfg }
+      # resource_config:
+      #   name: { concat: [{get_input: host_name },'_',{ get_attribute: [network_1, name] }] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: network_1
+      - type: cloudify.relationships.openstack.port_connected_to_subnet
+        target: subnet_1
+      - type: cloudify.relationships.openstack.port_connected_to_security_group
+        target: security_group_1
+      - type: cloudify.relationships.contained_in
+        target: vnf_tier
+
+# # Port 2
+#   port_subnet_2:
+#     type: cloudify.nodes.openstack.Port
+#     properties:
+#       client_config: { get_input: os_cfg }
+#       resource_config:
+#         name: { concat: [{get_input: host_name },'_',{ get_attribute: [network_2, name] }] }
+#     relationships:
+#       - type: cloudify.relationships.depends_on
+#         target: network_2
+#       - type: cloudify.relationships.openstack.port_connected_to_subnet
+#         target: subnet_2
+#       - type: cloudify.relationships.openstack.port_connected_to_security_group
+#         target: security_group_2
+
+#Server
+  server:
+    type: cloudify.nodes.openstack.Server
+    properties:
+      client_config: { get_input: os_cfg }
+      resource_config:
+        # name: { concat: [{ get_input: host_name },'.',{ get_input: domain_name }] }
+        name: 'dummy'
+        image_id: { get_attribute: [image, id] }
+        flavor_id: { get_attribute: [flavor, id] }
+        user_data: { get_attribute: [cloud_init_config, cloud_config] }
+        availability_zone: { get_input: availability_zone }
+        kwargs:
+          config_drive: true
+      agent_config:
+        install_method: none
+    relationships:
+      - type: cloudify.relationships.openstack.server_connected_to_port
+        target: port_subnet_1
+      # - type: cloudify.relationships.openstack.server_connected_to_port
+      #   target: port_subnet_2
+      - type: cloudify.relationships.openstack.server_connected_to_keypair
+        target: keypair
+      - type: cloudify.relationships.depends_on
+        target: cloud_init_config
+      - type: cloudify.relationships.contained_in
+        target: vnf_tier
+
+  server_registration_ipam:
+    type: cloudify.rest.BunchRequests
+    properties:
+      hosts: [{ get_input: [ipam_config, { get_input: environment }, ipam_ip] }]
+      port: 443
+      ssl: true
+      verify: false
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: server
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            preconfigure:
+              executor: central_deployment_agent
+              implementation: scripts/copy_properties.py
+            establish:
+              executor: central_deployment_agent
+              implementation: scripts/ipam_establish.sh
+              inputs:
+                rest_endpoint: { get_input: rest_endpoint }
+                rest_authorization_token: { concat: [ 'Authorization: Basic ', { get_secret: rest_authorization_token } ] }
+                username: { get_input: [ipam_config, { get_input: environment }, ipam_username] }
+                userpass: { get_input: [ipam_config, { get_input: environment }, ipam_password] }
+                type: "record:host"
+                payload:
+                  name: { get_attribute: [ SOURCE, target_name ] }
+                  ipv4addrs: [ { configure_for_dhcp: false, ipv4addr: { get_attribute: [ SOURCE, target_ip ] } } ]
+                  use_ttl: { get_input: use_ttl }
+                  ttl: { get_input: use_ttl }
+                  view: default
+            unlink:
+              executor: central_deployment_agent
+              implementation: scripts/ipam_unlink.sh
+              inputs:
+                rest_endpoint: { get_input: rest_endpoint }
+                rest_authorization_token: { concat: [ 'Authorization: Basic ', { get_secret: rest_authorization_token } ] }
+                username: { get_input: [ipam_config, { get_input: environment }, ipam_username] }
+                userpass: { get_input: [ipam_config, { get_input: environment }, ipam_password] }
+                field: name
+                value: { concat: [ { get_input: regex_escape_character }, {get_attribute: [SOURCE, target_name]} ] } # <-- search for host record with this name
+                type: "record:host"
+      # - type: cloudify.relationships.contained_in
+      #   target: server
+
+  vnf_tier:
+    type: cloudify.nodes.Root
+
+groups:
+  vm_and_ip:
+    members:
+      - port_subnet_1
+      # - port_subnet_2
+      - server
+      - server_registration_ipam
+      - vnf_tier
+
+policies:
+  scaling_policy:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 0
+      max_instances: 2
+    targets: [vm_and_ip]

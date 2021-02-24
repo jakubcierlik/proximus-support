@@ -1,0 +1,104 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-utilities-plugin # ?version=1.15.1
+  - plugin:cloudify-openstack-plugin?version= >=3.2.2 
+
+inputs:
+
+  # rest_endpoint:
+  #   type: string
+  #   default: { get_input: [ipam_config, { get_input: environment }, ipam_ip] }
+
+  client_config_dict:
+    default:
+      username: "jakubc"
+      password: "dxg!yxcv7"
+      project_name: "jakubc-tenant"
+      auth_url: "https://rackspace-api.cloudify.co:5000/v3"
+      region_name: "RegionOne"
+      user_domain_name: "default"
+      project_domain_name: "default"
+
+node_templates:
+
+  private-network:
+    type: cloudify.nodes.openstack.Network
+    properties:
+      client_config: { get_input: client_config_dict }
+      resource_config:
+        name: test-prv-network
+
+  private-subnet:
+    type: cloudify.nodes.openstack.Subnet
+    properties:
+      client_config: { get_input: client_config_dict }
+      resource_config:
+        ip_version: 4
+        name: test-prv-subnet
+        dns_nameservers: [8.8.4.4, 8.8.8.8]
+        cidr: "10.10.10.0/24"
+        allocation_pools:
+          - start: "10.10.10.2"
+            end: "10.10.10.254"
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: private-network
+
+  port:
+    type: cloudify.nodes.openstack.Port
+    properties:
+      client_config: { get_input: client_config_dict }
+      resource_config:
+        network_id: { get_attribute: [ private-network, id ] }
+    relationships:
+      - type: cloudify.relationships.openstack.port_connected_to_subnet
+        target: private-subnet
+
+  server:
+    type: cloudify.nodes.openstack.Server
+    properties:
+      client_config: { get_input: client_config_dict }
+      resource_config:
+        name: 'dummy'
+        image_id: 70de1e0f-2951-4eae-9a8f-05afd97cd036
+        flavor_id: m1.medium
+      agent_config:
+        install_method: none
+    relationships:
+      - type: cloudify.relationships.openstack.server_connected_to_port
+        target: port
+
+  server_registration_ipam:
+    type: cloudify.rest.BunchRequests
+    properties:
+      hosts: [https://jsonplaceholder.typicode.com]
+      port: 80
+      ssl: false
+      verify: false
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: server
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            preconfigure:
+              executor: central_deployment_agent
+              implementation: scripts/copy_properties.py
+            # establish:
+            #   executor: central_deployment_agent
+            #   implementation: scripts/ipam_establish.sh
+            #   inputs:
+            #     payload: 
+            #       cos: { get_attribute: [SOURCE, target_name] }
+            #       cos2: { get_attribute: [TARGET, name] }
+            # establish:
+            #   implementation: rest.cloudify_rest.tasks.bunch_execute
+            #   inputs:
+            #     templates:
+            #       - template_file: templates/example_template.yaml
+            #         save_to: create_record_host
+            #         prerender: true
+            #         params:
+            #           example: "asd" #{ get_attribute: [SOURCE, target_name] }
+

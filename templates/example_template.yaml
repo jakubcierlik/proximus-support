@@ -1,0 +1,11 @@
+rest_calls:
+   - path: /posts
+    method: POST
+    headers:
+      Content-type: application/json
+    payload:
+      example: '{{ example }}'
+    response_format: json
+    # response_translation: [user]
+    # response_expectation:
+    #     - ['id', '10']
